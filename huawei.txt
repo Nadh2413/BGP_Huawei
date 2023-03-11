@@ -1,0 +1,48 @@
+1.Show verison: 	display version
+2.vào mode enable :	system-view
+3.vào mode configuration:	system Datacom-Router
+4.vào mode interface :		interface gi 0/0/x
+5.đặt ip :		ip address 192.x.x.x 24
+6.show ip : ở trong mode interface : 	display this
+7.thoát mode :	quit
+8.xoa ip :	undo ip address ( cần vào trong interface )
+9. show cấu hình : display current-configuration
+10. lưu : save 
+11.reboot:	reboot
+12. **** BGP ****
+display bpg peer
+ - bgp 100
+ - bgp didplay this 
+ - network 192.168.10.0 24
+ - network 192.168.20.0 30
+ - peer 192.168.20.2 as-number 200
+
+ - display ip routing-table
+ -  display bgp peer
+ 
+
+ - bgp 200
+ - bgp didplay this 
+- router-id 1.1.1.1
+ - network 192.168.10.0 24
+ - network 192.168.20.0 30
+ - peer 192.168.20.1 as-number 100
+
+13. **** IP static route ***** 
+- ip route-static 192.168.2.0 24 192.168.30.1
+- ip route-static 192.168.3.0 24 ip-nextHop
+- display ip routing-table	
+- tracert -a ip_sour   ip_des
+- ping -a ip_sour  ip_des
+
+*** static với loopback
+- ip route-static 10.255.4.4 32 10.255.34.4
+
+14. OSPF 
+- ospf 1
+- area 0
+-  network 10.255.2.0 0.0.0.0
+  - ospf 1 router-id 1.1.1.1
+
+quit
+display current-configuration

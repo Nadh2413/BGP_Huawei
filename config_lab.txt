@@ -1,0 +1,125 @@
+***** 1. Đặt ip address 
+H1 : 
+sys view
+int g 0/0/2
+ip add 10.255.12.1 24
+un shut
+quit
+int l0
+ip add 10.255.1.1 32
+quit
+
+H2: 
+sys view
+int g0/0/1
+ip add 10.255.12.2 24
+un shut
+quit
+
+int g0/0/2
+ip add 10.255.23.2 24
+un sh
+q
+
+int l0
+ip add 10.255.2.2 32
+
+H3:
+int g0/01
+ip add 10.255.23.3 24
+un sh
+q
+
+int g0/0/2
+ip add 10.255.34.3 24
+un sh
+q
+
+int l0
+ip add 10.255.3.3 32
+q
+
+
+O4 :
+int g0/0/1
+ip add 10.255.34.4 24
+un sh
+q
+
+int l0
+ip add 10.255.4.4 32
+q
+
+*** 2. Cấu hình OSPF backbone giữa H2 và H3 trong core ISP
+H2 :
+OSPF 1 router-id 10.255.2.2
+ospf 1
+area 0
+network 10.255.2.0 0.0.0.0
+
+H3 : 
+OSPF 1 router-id 10.255.3.3
+ospf 1
+area 0
+network 10.255.3.0 0.0.0.0
+
+*** 3. Cấu hình iBGP và eBGP đồng thời dùng loopback0 làm BGP Router-ID
+a. **** iBGP giữa H2 và H3 ( ISP) ***** 65000
+H2 : 
+bgp 65000
+router-id 10.255.2.2
+peer 10.255.23.3 as-number 65000
+quit
+H3 :
+bgp 65000
+router-id 10.255.3.3
+peer 10.255.23.2 as-number 65000
+quit
+
+b.**** eBGP giữa H1 và H2  ****** 65001
+
+H1 : 
+bgp 65001
+router-id 10.255.1.1
+peer 10.255.12.2 as-number 65000
+network 10.255.1.1 32 
+quit
+
+H2 :
+bgp 65000
+peer 10.255.12.1 as-number 65000
+quit
+
+**** 4 . H3 kết nối với loopback của O4 tjppmg qua static route 
+O4 : 
+ ip route-static 10.255.3.3 32 10.255.34.3
+
+H3 : 
+ ip route-static 10.255.4.4 32 10.255.34.4
+
+
+**** 5 Cấu hình static route để H1 và O4 thông nhau
+
+H1 : 
+ip route-static 10.255.23.0 24 10.255.12.2
+ip route-static 10.255.34.0 24 10.255.12.2
+ip route-static 10.255.4.4 32 10.255.12.2
+
+H2 :
+ip route-static 10.255.1.1 32 10.255.12.1
+ip route-static 10.255.34.0 24 10.255.23.3
+ip route-static 10.255.4.4 32 10.255.23.3
+
+H3 :
+ip route-static 10.255.1.1 32 10.255.23.2
+ip route-static 10.255.12.0 24 10.255.23.2
+O4 : 
+ip route 10.255.1.1 32 10.255.34.3
+ip route 10.255.12.0 24 10.255.34.3
+ip route 10.255.23.0 24 10.255.34.3
+
+
+
+
+
+

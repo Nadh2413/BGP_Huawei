@@ -1,0 +1,228 @@
+Site A , ISP , Site B
+
+- Giữa H2 và H3 cấu hình OSPF
+- ISP ( H2 và H3 ) cấu hình iBGP
+- siteA ( H1 và H2 ) cấu hình eBGP
+- Giữa H3 và H4 định tuyến static route , H3 quảng bá vào ISP - iBGP
+- 04 kết nối đến Loopback0 H1 thông qua Static Route ? 
+
+Task :
+Vai trò các Swithc trong bài Lab BGP : H1 là Edge Router site A  65001
+, nhóm 2 router H2 và H3 thuộc ISP AS 65000 , router thứ 4 thuộc site B Edge
+- cấu hình OSPF Area Backbone trên các interface của H2 và H3 thuộc Core ISP,
+sử dụng IP lookback làm Router-ID
+- Các BGP Speaker sử dụng IP Looback0 làm BGP router-ID
+- Cấu hình iBGP AS 65000 trong Core ISP
+- Cấu hình eBGP trên H1 với H2 quảng bá Loopback 0 network vào eBGP
+- H3 kết nối đến looback0 của 04 thông qua 
+
+
+**** LAB BGP của vnNet ****
+*R1 : 
+int e0/0 
+ip add 10.1.12.1 255.255.255.0
+no sh
+int l0 
+ip add 1.1.1.1 255.255.255.255
+no sh
+int l1
+ip add 10.1.1.1	 255.255.255.0
+no sh	
+ex
+*R2 : 
+int e0/0 
+ip add 10.1.12.2 255.255.255.0
+no sh
+int e0/1
+ip add  10.1.23.2 255.255.255.0
+no sh
+int l0
+ip add 2.2.2.2 255.255.255.255
+ex
+*R3 : 
+int e0/0 
+ip add 10.1.23.3 255.255.255.0
+no sh
+int l0
+ip add 3.3.3.3 255.255.255.255
+no sh
+int l1
+ip add 10.1.3.3 255.255.255.0
+no sh
+ex
+
+*** OSPF 
+ R1 : 
+int range e0/0,l0
+ip ospf 1 area 0
+ex
+
+R2 : 
+int range e0/0-1 
+ip ospf 1 area 0
+ex
+R3 : 
+int range e0/0,l0 
+ip os 1 area 0
+ex
+**************
+show ip route để thấy mạng
+show ip os neighbor xem trạng thái
+ *** iBGP giữa R1 và R3
+
+**** nếu chạy 2 AS khac nhua mà chạy iBGP nên cấu hình lệnh tùy chỉnh
+R1
+router bpg 100
+neighbor 2.2.2.2 ebgp-multihop 
+hoặc neighbor 2.2.2.2 disable-connected-check 	
+
+
+
+R1 :
+conf t 
+router bgp 100 
+neighbor 3.3.3.3 remote-as 100 
+neighbor 3.3.3.3 update-source l0
+ex
+
+R3 : 
+conf t
+router bgp 100  
+neighbor 1.1.1.1 remote-as 100 
+neighbor 1.1.1.1 update-source l0
+ex
+
+
+show run | section route bgp
+show ip bgp neighbors - trạng thái Establish tức là đã sẵn sàng quảng bá định tuyến cho nhau
+
+** Quảng bá mạng 10.1.3.0 và 10.1.1.0
+R3 : 
+conf t
+router bgp 100 
+network 10.1.3.0 mask 255.255.255.0
+ex
+R1 : 
+conf t
+router bgp 100  
+network 10.1.1.0 mask 255.255.255.0
+ex
+
+Bảng bgp table : show ip bgp  display các attribute trong bgp dấu > là thể hiện tuyến đường tốt nhất
+show ip route : 
+-> lúc này chưa ping được từ R1 qua R3 qua cổng ethenet vì R2 chưa có định tuyến BGP
+nên lúc này cần FullMesh , nhưng cái này thì không khuyến cáo dùng mà hiện nay dùng MPLS 
+* Khi BGP thì con router chỉ cập nhật vào cơ sở dữ liệu chứ không gửi cho con router khác
+
+FullMesh : R2 peer R3 và  , R2 peer R1 và R1 peer R2,  R1 peer R3 và R3 peer R1
+* Nếu như R1 và R3 thông nhau mà không muốn R2 dùng BGP thì cần quảng bá OSPF trên R2 là ok
+
+BGP 
+R2 :
+conf t
+router bgp 100  
+neighbor 1.1.1.1 remote-as 100 
+neigbor 1.1.1.1 update-source l0
+neighbor 3.3.3.3 remote-as 100 
+neigbor 3.3.3.3 update-source l0
+ex
+làm tương tự bgp trên R1 và R3 với R2
+R1 : 
+router bgp 100 
+neighbor 2.2.2.2 remote-as 100 
+neighbor 2.2.2.2 update-source l0
+R3 : 
+router bgp 100 
+neighbor 2.2.2.2 remote-as 100 
+neighbor 2.2.2.2 update-source l0
+
+từ R1 ping 10.1.3.3 source l0 ok
+show ip bgp sum
+
+
+******** eBGP *********************
+*********************************
+*********************************
+*********************************
+*********************************
+
+R4 : 
+conf t
+int e0/1
+ip add 172.16.1.4 255.255.255.0
+no sh
+int e0/0
+ip add 192.168.45.4 255.255.255.0
+no sh
+ex
+
+R3 :
+conf t
+int e0/1
+ip add 172.16.1.3 255.255.255.0
+no sh
+ex
+
+R5:
+conf t
+int e0/0
+ip add 192.168.45.5 255.255.255.0
+no sh
+ex
+router bgp 200
+neighbor 192.168.45.4 remote-as 200
+ex
+
+R4 :
+router bgp 200
+neighbor 192.168.45.5 remote-as 200
+neighbor 172.16.1.3 remote-as 100
+ex
+
+R3 peer lai:
+router bgp 100
+neighbor 192.16.1.4 remote-as 200
+ex
+ 
+show ip bgp sum -> thay " Idle " tuc la chua duoc (r3)
+
+R5 - network mang 10.1.5.0 vao bgp 
+int l0
+ip add 10.1.5.5 255.255.255.0
+no sh
+ex
+router bgp 200
+network 10.1.5.0 mask 255.255.255.0
+ex
+
+Lucs này tại R4 lệnh show ip bgp 
+10.1.1.0/24 172.16.1.3   
+10.1.3.0/24 172.16.1.3
+10.1.5.0/24 192.168.45.5 
+
+Tại R5 show ip bgp
+thì cái next hop tức là next-AS ( 172.16.1.3 )
+trên bảng route của R5 thì không có  thì tức là R5 sẽ không đến được
+R1 tức là ( 10.1.1.0 ) thì cách giải quyết :
+- network 172.16.1.0/24 vào R5 -> ẩu vì cái cổng đấu nối router cần phải dấu đi
+mà thay vào đó là quảng bá cái loopback nhưng mà cx không phải quảng bá cái đó cho R3
+=> thằng R4 sẽ bảo là muốn đi ra ngoài AS thì qua nó và cấu hình bằng lệnh như sau:
+R4 :
+config 
+router bgp 100
+neighbor 192.168.45.5  next-hop-self
+ex
+cần phải upline 
+R4 : 
+R4 # clear ip bgp * out
+ Lúc này qua R5
+Tại R5 show ip bgp
+thì cái next hop là 192.168.45.4) -> R5 đi qua R4 biên mới ra AS 100 
+
+Làm tương tự với biên R3:
+config 
+router bgp 100
+neighbor 2.2.2.2 next-hop-self
+neighbor 1.1.1.1 next-hop-self
+end
+R3#clear bgp * out	
